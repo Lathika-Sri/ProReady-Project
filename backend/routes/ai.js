@@ -10,7 +10,6 @@ const auth = require('../middleware/auth');
 router.post('/resume/generate', auth, async (req, res) => {
   try {
     const resumeData = req.body;
-    
     const generatedText = await aiService.generateResume(resumeData);
     
     const resume = new Resume({
@@ -38,11 +37,28 @@ router.get('/resume', auth, async (req, res) => {
   }
 });
 
+// DELETE RESUME - NEW ROUTE
+router.delete('/resume/:id', auth, async (req, res) => {
+  try {
+    const resume = await Resume.findOneAndDelete({ 
+      _id: req.params.id, 
+      userId: req.user.id 
+    });
+
+    if (!resume) {
+      return res.status(404).json({ message: 'Resume not found' });
+    }
+
+    res.json({ message: 'Resume deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Summarize Notes
 router.post('/notes/summarize', auth, async (req, res) => {
   try {
     const { title, content } = req.body;
-    
     const result = await aiService.summarizeNotes(content, title);
     
     const notes = new Notes({
@@ -72,11 +88,23 @@ router.get('/notes', auth, async (req, res) => {
   }
 });
 
+// Delete note
+router.delete('/notes/:id', auth, async (req, res) => {
+  try {
+    await Notes.findOneAndDelete({ 
+      _id: req.params.id, 
+      userId: req.user.id 
+    });
+    res.json({ message: 'Note deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Generate Roadmap
 router.post('/roadmap/generate', auth, async (req, res) => {
   try {
     const { targetRole, duration } = req.body;
-    
     const result = await aiService.generateRoadmap(targetRole, duration);
     
     const roadmap = new Roadmap({
@@ -99,18 +127,6 @@ router.get('/roadmap', auth, async (req, res) => {
     const roadmaps = await Roadmap.find({ userId: req.user.id })
       .sort({ generatedAt: -1 });
     res.json({ roadmaps });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-// Delete note
-router.delete('/notes/:id', auth, async (req, res) => {
-  try {
-    await Notes.findOneAndDelete({ 
-      _id: req.params.id, 
-      userId: req.user.id 
-    });
-    res.json({ message: 'Note deleted' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
