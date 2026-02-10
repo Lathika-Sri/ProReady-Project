@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, Sparkles, History, Eye } from 'lucide-react';
+import { FileText, Download, Sparkles, History, Eye, Trash2 } from 'lucide-react';
 import api from '../../utils/api';
 
 const ResumeGenerator = () => {
@@ -124,7 +124,7 @@ const ResumeGenerator = () => {
       // Refresh saved resumes list
       fetchSavedResumes();
       
-      alert('Resume generated and saved successfully!');
+      alert('Resume generated and saved successfully! 🎉');
     } catch (error) {
       alert('Error generating resume: ' + (error.response?.data?.message || error.message));
     } finally {
@@ -147,16 +147,42 @@ const ResumeGenerator = () => {
     setShowHistory(false);
   };
 
+  const deleteResume = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this resume?')) {
+      return;
+    }
+
+    try {
+      await api.delete(`/ai/resume/${id}`);
+      fetchSavedResumes();
+      
+      // Clear displayed resume if it was the deleted one
+      if (generatedResume) {
+        const deletedResume = savedResumes.find(r => r._id === id);
+        if (deletedResume && deletedResume.generatedResume === generatedResume) {
+          setGeneratedResume('');
+        }
+      }
+      
+      alert('Resume deleted successfully! ✓');
+    } catch (error) {
+      alert('Error deleting resume: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
   return (
-    <div className="max-w-6xl mx-auto p-6">
+    <div className="max-w-6xl mx-auto p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <FileText size={32} className="text-teal-500" />
-          <h2 className="text-3xl font-bold">AI Resume Generator</h2>
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">AI Resume Generator</h2>
+            <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">Create professional resumes with AI</p>
+          </div>
         </div>
         <button
           onClick={() => setShowHistory(!showHistory)}
-          className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition"
+          className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition shadow-lg"
         >
           <History size={20} />
           My Resumes ({savedResumes.length})
@@ -164,44 +190,69 @@ const ResumeGenerator = () => {
       </div>
 
       {showHistory ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-semibold">Saved Resumes</h3>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Saved Resumes</h3>
             <button
               onClick={() => setShowHistory(false)}
-              className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+              className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 font-medium"
             >
-              Back to Generator
+              ← Back to Generator
             </button>
           </div>
           
           {savedResumes.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No saved resumes yet. Generate your first one!</p>
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">📄</div>
+              <p className="text-gray-500 dark:text-gray-400 text-lg">No saved resumes yet.</p>
+              <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">Generate your first one to get started!</p>
+            </div>
           ) : (
             <div className="space-y-4">
               {savedResumes.map((resume) => (
-                <div key={resume._id} className="border dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                <div key={resume._id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
                   <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-semibold">{resume.personalInfo?.name || 'Unnamed Resume'}</h4>
-                      <p className="text-sm text-gray-500">
-                        Created: {new Date(resume.createdAt).toLocaleDateString()}
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-lg text-gray-900 dark:text-white">
+                        {resume.personalInfo?.name || 'Unnamed Resume'}
+                      </h4>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Created: {new Date(resume.createdAt).toLocaleDateString('en-US', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}
                       </p>
+                      {resume.personalInfo?.email && (
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                          {resume.personalInfo.email}
+                        </p>
+                      )}
                     </div>
                     <div className="flex gap-2">
                       <button
                         onClick={() => viewResume(resume)}
-                        className="flex items-center gap-1 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+                        className="flex items-center gap-1 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm font-medium transition"
+                        title="View resume"
                       >
                         <Eye size={16} />
                         View
                       </button>
                       <button
                         onClick={() => downloadResume(resume.generatedResume)}
-                        className="flex items-center gap-1 px-3 py-1 bg-teal-500 text-white rounded hover:bg-teal-600 text-sm"
+                        className="flex items-center gap-1 px-3 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 text-sm font-medium transition"
+                        title="Download resume"
                       >
                         <Download size={16} />
                         Download
+                      </button>
+                      <button
+                        onClick={() => deleteResume(resume._id)}
+                        className="flex items-center gap-1 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm font-medium transition"
+                        title="Delete resume"
+                      >
+                        <Trash2 size={16} />
+                        Delete
                       </button>
                     </div>
                   </div>
@@ -212,7 +263,7 @@ const ResumeGenerator = () => {
         </div>
       ) : (
         <>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
             {/* Personal Information */}
             <section className="mb-6">
               <h3 className="text-xl font-semibold mb-4 text-teal-500">Personal Information</h3>
@@ -222,42 +273,42 @@ const ResumeGenerator = () => {
                   placeholder="Full Name *"
                   value={formData.personalInfo.name}
                   onChange={(e) => handleInputChange('personalInfo', 'name', e.target.value)}
-                  className="p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                  className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 />
                 <input
                   type="email"
                   placeholder="Email *"
                   value={formData.personalInfo.email}
                   onChange={(e) => handleInputChange('personalInfo', 'email', e.target.value)}
-                  className="p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                  className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 />
                 <input
                   type="tel"
                   placeholder="Phone"
                   value={formData.personalInfo.phone}
                   onChange={(e) => handleInputChange('personalInfo', 'phone', e.target.value)}
-                  className="p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                  className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 />
                 <input
                   type="text"
                   placeholder="LinkedIn URL"
                   value={formData.personalInfo.linkedin}
                   onChange={(e) => handleInputChange('personalInfo', 'linkedin', e.target.value)}
-                  className="p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                  className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 />
                 <input
                   type="text"
                   placeholder="GitHub URL"
                   value={formData.personalInfo.github}
                   onChange={(e) => handleInputChange('personalInfo', 'github', e.target.value)}
-                  className="p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                  className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 />
                 <input
                   type="text"
                   placeholder="Portfolio URL"
                   value={formData.personalInfo.portfolio}
                   onChange={(e) => handleInputChange('personalInfo', 'portfolio', e.target.value)}
-                  className="p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                  className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 />
               </div>
             </section>
@@ -268,47 +319,47 @@ const ResumeGenerator = () => {
                 <h3 className="text-xl font-semibold text-teal-500">Education</h3>
                 <button
                   onClick={() => addEntry('education')}
-                  className="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 text-sm"
+                  className="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 text-sm font-medium transition"
                 >
                   + Add Education
                 </button>
               </div>
               {formData.education.map((edu, index) => (
-                <div key={index} className="mb-4 p-4 border rounded-lg dark:border-gray-700">
+                <div key={index} className="mb-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700/30">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <input
                       type="text"
                       placeholder="Institution *"
                       value={edu.institution}
                       onChange={(e) => handleInputChange('education', 'institution', e.target.value, index)}
-                      className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                      className="p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                     />
                     <input
                       type="text"
                       placeholder="Degree (e.g., B.Tech CSE)"
                       value={edu.degree}
                       onChange={(e) => handleInputChange('education', 'degree', e.target.value, index)}
-                      className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                      className="p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                     />
                     <input
                       type="text"
                       placeholder="Year (e.g., 2020-2024)"
                       value={edu.year}
                       onChange={(e) => handleInputChange('education', 'year', e.target.value, index)}
-                      className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                      className="p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                     />
                     <input
                       type="text"
                       placeholder="CGPA (e.g., 8.5/10)"
                       value={edu.cgpa}
                       onChange={(e) => handleInputChange('education', 'cgpa', e.target.value, index)}
-                      className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                      className="p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                     />
                   </div>
                   {index > 0 && (
                     <button
                       onClick={() => removeEntry('education', index)}
-                      className="mt-2 text-red-500 text-sm hover:underline"
+                      className="mt-2 text-red-500 dark:text-red-400 text-sm hover:underline"
                     >
                       Remove
                     </button>
@@ -322,22 +373,22 @@ const ResumeGenerator = () => {
               <h3 className="text-xl font-semibold mb-4 text-teal-500">Skills</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Technical Skills (comma-separated) *</label>
+                  <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Technical Skills (comma-separated) *</label>
                   <textarea
                     placeholder="Python, JavaScript, React, Node.js, MongoDB, MySQL, Git"
                     value={formData.skills.technical}
                     onChange={(e) => handleInputChange('skills', 'technical', e.target.value)}
-                    className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                     rows="2"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Soft Skills (comma-separated)</label>
+                  <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Soft Skills (comma-separated)</label>
                   <textarea
                     placeholder="Team Leadership, Communication, Problem Solving, Time Management"
                     value={formData.skills.soft}
                     onChange={(e) => handleInputChange('skills', 'soft', e.target.value)}
-                    className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                     rows="2"
                   />
                 </div>
@@ -350,25 +401,25 @@ const ResumeGenerator = () => {
                 <h3 className="text-xl font-semibold text-teal-500">Projects</h3>
                 <button
                   onClick={() => addEntry('projects')}
-                  className="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 text-sm"
+                  className="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 text-sm font-medium transition"
                 >
                   + Add Project
                 </button>
               </div>
               {formData.projects.map((project, index) => (
-                <div key={index} className="mb-4 p-4 border rounded-lg dark:border-gray-700">
+                <div key={index} className="mb-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700/30">
                   <input
                     type="text"
                     placeholder="Project Name *"
                     value={project.name}
                     onChange={(e) => handleInputChange('projects', 'name', e.target.value, index)}
-                    className="w-full p-2 border rounded mb-2 dark:bg-gray-700 dark:border-gray-600"
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded mb-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                   />
                   <textarea
                     placeholder="Description (what the project does, your role, impact)"
                     value={project.description}
                     onChange={(e) => handleInputChange('projects', 'description', e.target.value, index)}
-                    className="w-full p-2 border rounded mb-2 dark:bg-gray-700 dark:border-gray-600"
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded mb-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                     rows="2"
                   />
                   <input
@@ -376,19 +427,19 @@ const ResumeGenerator = () => {
                     placeholder="Technologies (comma-separated): React, Node.js, MongoDB"
                     value={project.technologies}
                     onChange={(e) => handleInputChange('projects', 'technologies', e.target.value, index)}
-                    className="w-full p-2 border rounded mb-2 dark:bg-gray-700 dark:border-gray-600"
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded mb-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                   />
                   <input
                     type="text"
                     placeholder="Project Link (GitHub/Live Demo)"
                     value={project.link}
                     onChange={(e) => handleInputChange('projects', 'link', e.target.value, index)}
-                    className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                   />
                   {index > 0 && (
                     <button
                       onClick={() => removeEntry('projects', index)}
-                      className="mt-2 text-red-500 text-sm hover:underline"
+                      className="mt-2 text-red-500 dark:text-red-400 text-sm hover:underline"
                     >
                       Remove
                     </button>
@@ -403,27 +454,27 @@ const ResumeGenerator = () => {
                 <h3 className="text-xl font-semibold text-teal-500">Experience (Optional)</h3>
                 <button
                   onClick={() => addEntry('experience')}
-                  className="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 text-sm"
+                  className="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 text-sm font-medium transition"
                 >
                   + Add Experience
                 </button>
               </div>
               {formData.experience.map((exp, index) => (
-                <div key={index} className="mb-4 p-4 border rounded-lg dark:border-gray-700">
+                <div key={index} className="mb-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700/30">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
                     <input
                       type="text"
                       placeholder="Company Name"
                       value={exp.company}
                       onChange={(e) => handleInputChange('experience', 'company', e.target.value, index)}
-                      className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                      className="p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                     />
                     <input
                       type="text"
                       placeholder="Role/Position"
                       value={exp.role}
                       onChange={(e) => handleInputChange('experience', 'role', e.target.value, index)}
-                      className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                      className="p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                     />
                   </div>
                   <input
@@ -431,18 +482,18 @@ const ResumeGenerator = () => {
                     placeholder="Duration (e.g., Jun 2023 - Aug 2023)"
                     value={exp.duration}
                     onChange={(e) => handleInputChange('experience', 'duration', e.target.value, index)}
-                    className="w-full p-2 border rounded mb-2 dark:bg-gray-700 dark:border-gray-600"
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded mb-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                   />
                   <textarea
                     placeholder="Description (responsibilities, achievements - use periods to separate points)"
                     value={exp.description}
                     onChange={(e) => handleInputChange('experience', 'description', e.target.value, index)}
-                    className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                     rows="3"
                   />
                   <button
                     onClick={() => removeEntry('experience', index)}
-                    className="mt-2 text-red-500 text-sm hover:underline"
+                    className="mt-2 text-red-500 dark:text-red-400 text-sm hover:underline"
                   >
                     Remove
                   </button>
@@ -455,22 +506,22 @@ const ResumeGenerator = () => {
               <h3 className="text-xl font-semibold mb-4 text-teal-500">Additional Information</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Certifications (comma-separated)</label>
+                  <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Certifications (comma-separated)</label>
                   <textarea
                     placeholder="AWS Certified Developer, Google Analytics Certified, Coursera Machine Learning"
                     value={formData.certifications}
                     onChange={(e) => handleInputChange(null, 'certifications', e.target.value)}
-                    className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                     rows="2"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Achievements (comma-separated)</label>
+                  <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Achievements (comma-separated)</label>
                   <textarea
                     placeholder="Winner of Hackathon 2023, Published Research Paper, Dean's List Scholar"
                     value={formData.achievements}
                     onChange={(e) => handleInputChange(null, 'achievements', e.target.value)}
-                    className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                     rows="2"
                   />
                 </div>
@@ -481,10 +532,13 @@ const ResumeGenerator = () => {
             <button
               onClick={generateResume}
               disabled={loading}
-              className="w-full bg-gradient-to-r from-teal-500 to-purple-500 text-white font-bold py-4 px-6 rounded-lg hover:from-teal-600 hover:to-purple-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full bg-gradient-to-r from-teal-500 to-purple-500 text-white font-bold py-4 px-6 rounded-lg hover:from-teal-600 hover:to-purple-600 transition disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
             >
               {loading ? (
-                <>Generating Resume with AI...</>
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  Generating Resume with AI...
+                </>
               ) : (
                 <>
                   <Sparkles size={20} />
@@ -496,21 +550,21 @@ const ResumeGenerator = () => {
 
           {/* Generated Resume */}
           {generatedResume && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-200 dark:border-gray-700">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-semibold">Your Generated Resume</h3>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Your Generated Resume</h3>
                 <button
                   onClick={() => downloadResume()}
-                  className="flex items-center gap-2 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600"
+                  className="flex items-center gap-2 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition shadow-lg"
                 >
                   <Download size={18} />
                   Download as TXT
                 </button>
               </div>
-              <div className="bg-gray-50 dark:bg-gray-900 p-6 rounded-lg whitespace-pre-wrap font-mono text-sm border border-gray-200 dark:border-gray-700 max-h-96 overflow-y-auto">
+              <div className="bg-gray-50 dark:bg-gray-900 p-6 rounded-lg whitespace-pre-wrap font-mono text-sm border border-gray-200 dark:border-gray-700 max-h-96 overflow-y-auto text-gray-900 dark:text-gray-100">
                 {generatedResume}
               </div>
-              <p className="text-sm text-gray-500 mt-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-4">
                 💡 Tip: Copy this to a Word document for better formatting and customization
               </p>
             </div>
