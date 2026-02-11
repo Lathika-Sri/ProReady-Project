@@ -10,34 +10,19 @@ const resumeSchema = new mongoose.Schema({
     github: String,
     portfolio: String
   },
-  education: [{
-    institution: String,
-    degree: String,
-    year: String,
-    cgpa: String
-  }],
+  education: [],
   skills: {
     technical: [String],
     soft: [String]
   },
-  projects: [{
-    name: String,
-    description: String,
-    technologies: [String],
-    link: String,
-    highlights: [String]
-  }],
-  experience: [{
-    company: String,
-    role: String,
-    duration: String,
-    description: [String]
-  }],
+  projects: [],
+  experience: [],
   certifications: [String],
   achievements: [String],
   generatedResume: String,
+  pdfPath: String,
   createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  updatedAt: Date
 });
 
 module.exports = mongoose.model('Resume', resumeSchema);

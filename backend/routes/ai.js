@@ -1,27 +1,55 @@
+// backend/routes/ai.js
+// COMPLETE FILE - Replace your entire ai.js with this
+
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
 const Resume = require('../models/Resume');
 const Notes = require('../models/Notes');
 const Roadmap = require('../models/Roadmap');
 const aiService = require('../services/aiService');
+const pdfGenerator = require('../services/pdfGenerator');
 const auth = require('../middleware/auth');
 
-// Generate Resume
+// Generate Resume with TXT + PDF
 router.post('/resume/generate', auth, async (req, res) => {
   try {
     const resumeData = req.body;
+    
+    // Generate AI text resume
     const generatedText = await aiService.generateResume(resumeData);
     
+    // Create uploads directory if it doesn't exist
+    const uploadsDir = path.join(__dirname, '../uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    // Generate PDF
+    const pdfFileName = `resume_${req.user.id}_${Date.now()}.pdf`;
+    const pdfPath = path.join(uploadsDir, pdfFileName);
+    
+    await pdfGenerator.generateATSResume(resumeData, pdfPath);
+    
+    // Save to database
     const resume = new Resume({
       userId: req.user.id,
       ...resumeData,
       generatedResume: generatedText,
+      pdfPath: pdfFileName,
       updatedAt: new Date()
     });
     
     await resume.save();
-    res.json({ message: 'Resume generated', resume });
+    
+    res.json({ 
+      message: 'Resume generated successfully', 
+      resume,
+      pdfUrl: `/api/ai/resume/download-pdf/${pdfFileName}`
+    });
   } catch (error) {
+    console.error('Resume generation error:', error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -37,7 +65,26 @@ router.get('/resume', auth, async (req, res) => {
   }
 });
 
-// DELETE RESUME - NEW ROUTE
+// Download PDF Resume
+router.get('/resume/download-pdf/:filename', auth, async (req, res) => {
+  try {
+    const filePath = path.join(__dirname, '../uploads', req.params.filename);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: 'PDF not found' });
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${req.params.filename}"`);
+    
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Delete resume
 router.delete('/resume/:id', auth, async (req, res) => {
   try {
     const resume = await Resume.findOneAndDelete({ 
@@ -47,6 +94,14 @@ router.delete('/resume/:id', auth, async (req, res) => {
 
     if (!resume) {
       return res.status(404).json({ message: 'Resume not found' });
+    }
+
+    // Delete PDF file if exists
+    if (resume.pdfPath) {
+      const pdfPath = path.join(__dirname, '../uploads', resume.pdfPath);
+      if (fs.existsSync(pdfPath)) {
+        fs.unlinkSync(pdfPath);
+      }
     }
 
     res.json({ message: 'Resume deleted successfully' });
