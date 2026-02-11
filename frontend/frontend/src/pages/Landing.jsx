@@ -142,6 +142,7 @@ const Landing = () => {
             <p className="text-lg font-semibold mb-2">ProReady</p>
             <p className="text-sm">© 2024 ProReady. All rights reserved.</p>
             <p className="text-sm mt-2">Track your effort. Improve your journey.</p>
+            <p className="text-sm mt-2">Built by Lathika Sri ✨</p>
           </div>
         </div>
       </footer>

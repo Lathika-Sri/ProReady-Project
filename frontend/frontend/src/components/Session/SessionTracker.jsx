@@ -280,7 +280,7 @@ const SessionTracker = () => {
                       value={activityDetails.problemsSolved}
                       onChange={(e) => setActivityDetails({
                         ...activityDetails,
-                        problemsSolved: parseInt(e.target.value) || 0
+                        problemsSolved: parseInt(e.target.value) 
                       })}
                       className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       min="0"
@@ -378,6 +378,7 @@ const SessionTracker = () => {
               <Trophy size={24} />
               <h3 className="text-lg font-semibold">Achievement Zone</h3>
             </div>
+            <h3>To acheive this zone, The goal should be 7 days</h3>
 
             <div className="space-y-3">
               {streak?.currentStreak >= 7 && (

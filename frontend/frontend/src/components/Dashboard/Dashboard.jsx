@@ -268,6 +268,8 @@ const Dashboard = () => {
         ) : (
           <div className="h-[300px] flex items-center justify-center text-gray-500 dark:text-gray-400">
             <p>Start using different resources to see comparison! 📈</p>
+            <br/>
+            <p>If you are a new user please refer resources page and track your efficiency</p>
           </div>
         )}
       </div>
