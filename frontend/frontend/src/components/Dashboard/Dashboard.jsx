@@ -11,7 +11,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchData();
-  }, [period]);
+  }, [fetchData]);
 
   const fetchData = async () => {
     setLoading(true);

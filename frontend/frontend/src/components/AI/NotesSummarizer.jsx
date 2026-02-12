@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Sparkles, History, Eye, Trash2 } from 'lucide-react';
+import { Sparkles, History } from 'lucide-react';
 import api from '../../utils/api';
 
 const NotesSummarizer = () => {
