@@ -101,6 +101,22 @@ router.get('/resume/:id/pdf', auth, async (req, res) => {
     res.status(500).json({ message: 'Failed to generate PDF' });
   }
 });
+/* ============================
+   GET ALL SAVED RESUMES
+============================ */
+
+router.get('/resume', auth, async (req, res) => {
+  try {
+    const resumes = await Resume.find({ userId: req.user.id })
+      .sort({ createdAt: -1 });
+
+    res.json({ resumes });
+
+  } catch (error) {
+    console.error('Error fetching resumes:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
 
 
 
