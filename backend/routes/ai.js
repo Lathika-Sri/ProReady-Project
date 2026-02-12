@@ -78,18 +78,30 @@ return res.json({
    GET ALL SAVED RESUMES (TEXT)
 ============================ */
 
-router.get('/resume', auth, async (req, res) => {
+// Generate PDF for existing resume
+router.get('/resume/:id/pdf', auth, async (req, res) => {
   try {
-    const resumes = await Resume.find({ userId: req.user.id })
-      .sort({ createdAt: -1 });
+    const resume = await Resume.findOne({
+      _id: req.params.id,
+      userId: req.user.id
+    });
 
-    res.json({ resumes });
+    if (!resume) {
+      return res.status(404).json({ message: 'Resume not found' });
+    }
+
+    const pdfBuffer = await pdfGenerator.generateATSResume(resume);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="resume.pdf"');
+    res.send(pdfBuffer);
 
   } catch (error) {
-    console.error('Error fetching resumes:', error);
-    res.status(500).json({ message: error.message });
+    console.error('PDF regeneration error:', error);
+    res.status(500).json({ message: 'Failed to generate PDF' });
   }
 });
+
 
 
 /* ============================
