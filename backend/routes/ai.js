@@ -1,83 +1,154 @@
-// backend/routes/ai.js
-// COMPLETE FILE - Replace your entire ai.js with this
+// routes/ai.js - IMPROVED WITH BETTER ERROR HANDLING
 
 const express = require('express');
 const router = express.Router();
-const fs = require('fs');
 const path = require('path');
+const fs = require('fs').promises;
+
 const Resume = require('../models/Resume');
-const Notes = require('../models/Notes');
-const Roadmap = require('../models/Roadmap');
+const auth = require('../middleware/auth');
 const aiService = require('../services/aiService');
 const pdfGenerator = require('../services/pdfGenerator');
-const auth = require('../middleware/auth');
 
-// Generate Resume with TXT + PDF
+
+/* ============================
+   RESUME GENERATION - IMPROVED
+============================ */
+
 router.post('/resume/generate', auth, async (req, res) => {
   try {
+    console.log('📝 Starting resume generation...');
     const resumeData = req.body;
-    
-    // Generate AI text resume
-    const generatedText = await aiService.generateResume(resumeData);
-    
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = path.join(__dirname, '../uploads');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
+
+    // Validate required fields
+    if (!resumeData.personalInfo || !resumeData.personalInfo.name || !resumeData.personalInfo.email) {
+      return res.status(400).json({ 
+        message: 'Name and email are required fields' 
+      });
     }
 
-    // Generate PDF
-    const pdfFileName = `resume_${req.user.id}_${Date.now()}.pdf`;
-    const pdfPath = path.join(uploadsDir, pdfFileName);
+    // STEP 1: Generate AI text (with fallback)
+    console.log('🤖 Generating resume text...');
+    let generatedText;
+    let usedFallback = false;
     
-    await pdfGenerator.generateATSResume(resumeData, pdfPath);
+    try {
+      generatedText = await aiService.generateResume(resumeData);
+      console.log('✅ Resume text generated successfully');
+    } catch (error) {
+      console.error('⚠️ AI generation failed, using template:', error.message);
+      generatedText = aiService.generateTemplateResume(resumeData);
+      usedFallback = true;
+      console.log('✅ Template resume generated');
+    }
+
+    // STEP 2: Generate PDF
+    console.log('📄 Generating PDF...');
+    let pdfBuffer;
+    let pdfFilename = null;
+    let pdfUrl = null;
     
-    // Save to database
+    try {
+      pdfBuffer = await pdfGenerator.generateATSResume(resumeData);
+      console.log('✅ PDF buffer created');
+      
+      // Save PDF to disk
+      pdfFilename = `resume_${req.user.id}_${Date.now()}.pdf`;
+      const uploadsDir = path.join(__dirname, '../uploads/resumes');
+      
+      await fs.mkdir(uploadsDir, { recursive: true });
+      const pdfPath = path.join(uploadsDir, pdfFilename);
+      
+      await fs.writeFile(pdfPath, pdfBuffer);
+      console.log('✅ PDF saved to disk');
+      
+      pdfUrl = `/api/ai/resume/download-pdf/${pdfFilename}`;
+      
+    } catch (pdfError) {
+      console.error('⚠️ PDF generation failed:', pdfError.message);
+      // Continue without PDF - at least save the text
+    }
+
+    // STEP 3: Save to database
+    console.log('💾 Saving to database...');
     const resume = new Resume({
       userId: req.user.id,
       ...resumeData,
       generatedResume: generatedText,
-      pdfPath: pdfFileName,
-      updatedAt: new Date()
+      pdfPath: pdfFilename
     });
-    
+
     await resume.save();
-    
-    res.json({ 
-      message: 'Resume generated successfully', 
+    console.log('✅ Resume saved to database');
+
+    // Success response
+    res.json({
+      message: 'Resume generated successfully',
       resume,
-      pdfUrl: `/api/ai/resume/download-pdf/${pdfFileName}`
+      pdfUrl,
+      warning: usedFallback ? 'AI service unavailable. Template-based resume generated.' : null
     });
+
   } catch (error) {
-    console.error('Resume generation error:', error);
-    res.status(500).json({ message: error.message });
+    console.error('❌ Resume Generation Error:', error);
+    console.error('Stack:', error.stack);
+    
+    // Send detailed error in development, generic in production
+    res.status(500).json({ 
+      message: 'Resume generation failed. Please try again.',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
-// Get user resumes
+
+// Download PDF
+router.get('/resume/download-pdf/:filename', auth, async (req, res) => {
+  try {
+    const { filename } = req.params;
+    
+    // Security validation
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({ message: 'Invalid filename' });
+    }
+
+    const pdfPath = path.join(__dirname, '../uploads/resumes', filename);
+
+    // Check if file exists
+    try {
+      await fs.access(pdfPath);
+    } catch {
+      console.error(`PDF not found: ${pdfPath}`);
+      return res.status(404).json({ 
+        message: 'PDF file not found. It may have been deleted during server restart.' 
+      });
+    }
+
+    // Send file
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    
+    const fileBuffer = await fs.readFile(pdfPath);
+    res.send(fileBuffer);
+
+  } catch (error) {
+    console.error('PDF Download Error:', error);
+    res.status(500).json({ message: 'Error downloading PDF' });
+  }
+});
+
+
+// Get all resumes
 router.get('/resume', auth, async (req, res) => {
   try {
     const resumes = await Resume.find({ userId: req.user.id })
       .sort({ createdAt: -1 });
+
     res.json({ resumes });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Download PDF Resume
-router.post('/resume/download-pdf', auth, async (req, res) => {
-  try {
-    const resumeData = req.body;
-
-    const pdfBuffer = await pdfGenerator.generateATSResumeBuffer(resumeData);
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename=resume.pdf');
-
-    res.send(pdfBuffer);
 
   } catch (error) {
+    console.error('Error fetching resumes:', error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -86,9 +157,9 @@ router.post('/resume/download-pdf', auth, async (req, res) => {
 // Delete resume
 router.delete('/resume/:id', auth, async (req, res) => {
   try {
-    const resume = await Resume.findOneAndDelete({ 
-      _id: req.params.id, 
-      userId: req.user.id 
+    const resume = await Resume.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user.id
     });
 
     if (!resume) {
@@ -97,106 +168,32 @@ router.delete('/resume/:id', auth, async (req, res) => {
 
     // Delete PDF file if exists
     if (resume.pdfPath) {
-      const pdfPath = path.join(__dirname, '../uploads', resume.pdfPath);
-      if (fs.existsSync(pdfPath)) {
-        fs.unlinkSync(pdfPath);
+      const pdfPath = path.join(__dirname, '../uploads/resumes', resume.pdfPath);
+      try {
+        await fs.unlink(pdfPath);
+        console.log('✅ PDF file deleted');
+      } catch (err) {
+        console.log('⚠️ PDF file not found or already deleted');
       }
     }
 
     res.json({ message: 'Resume deleted successfully' });
+
   } catch (error) {
+    console.error('Delete error:', error);
     res.status(500).json({ message: error.message });
   }
 });
 
-// Summarize Notes
-router.post('/notes/summarize', auth, async (req, res) => {
-  try {
-    const { title, content } = req.body;
-    const result = await aiService.summarizeNotes(content, title);
-    
-    const notes = new Notes({
-      userId: req.user.id,
-      title,
-      originalContent: content,
-      summary: result.summary,
-      keyPoints: result.keyPoints || [],
-      updatedAt: new Date()
-    });
-    
-    await notes.save();
-    res.json({ message: 'Notes summarized', notes });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+
+// Health check endpoint
+router.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    service: 'AI Resume Generator',
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Get user notes
-router.get('/notes', auth, async (req, res) => {
-  try {
-    const notes = await Notes.find({ userId: req.user.id })
-      .sort({ createdAt: -1 });
-    res.json({ notes });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Delete note
-router.delete('/notes/:id', auth, async (req, res) => {
-  try {
-    await Notes.findOneAndDelete({ 
-      _id: req.params.id, 
-      userId: req.user.id 
-    });
-    res.json({ message: 'Note deleted' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Generate Roadmap
-router.post('/roadmap/generate', auth, async (req, res) => {
-  try {
-    const { targetRole, duration } = req.body;
-    const result = await aiService.generateRoadmap(targetRole, duration);
-    
-    const roadmap = new Roadmap({
-      userId: req.user.id,
-      targetRole,
-      duration,
-      weeklyPlan: result.weeklyPlan || []
-    });
-    
-    await roadmap.save();
-    res.json({ message: 'Roadmap generated', roadmap });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Get user roadmaps
-router.get('/roadmap', auth, async (req, res) => {
-  try {
-    const roadmaps = await Roadmap.find({ userId: req.user.id })
-      .sort({ generatedAt: -1 });
-    res.json({ roadmaps });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Delete roadmap
-router.delete('/roadmap/:id', auth, async (req, res) => {
-  try {
-    await Roadmap.findOneAndDelete({ 
-      _id: req.params.id, 
-      userId: req.user.id 
-    });
-    res.json({ message: 'Roadmap deleted' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
 
 module.exports = router;
