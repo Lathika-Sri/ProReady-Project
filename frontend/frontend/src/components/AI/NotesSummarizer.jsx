@@ -32,7 +32,7 @@ const NotesSummarizer = () => {
     setLoading(true);
     try {
       const res = await api.post('/ai/notes/summarize', { title, content });
-      setSummary(res.data.notes);
+      setSummary(res.data.summary);
       fetchSavedNotes();
       setTitle('');
       setContent('');
