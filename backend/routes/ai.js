@@ -155,6 +155,48 @@ router.get('/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+/* ============================
+   ROADMAP GENERATION
+============================ */
+
+router.post('/roadmap/generate', auth, async (req, res) => {
+  try {
+    const { career } = req.body;
+
+    if (!career) {
+      return res.status(400).json({ message: 'Career field is required' });
+    }
+
+    const roadmap = await aiService.generateRoadmap(career);
+
+    res.json({ roadmap });
+
+  } catch (error) {
+    console.error('Roadmap generation error:', error);
+    res.status(500).json({ message: 'Failed to generate roadmap' });
+  }
+});
+/* ============================
+   NOTES SUMMARIZER
+============================ */
+
+router.post('/notes/summarize', auth, async (req, res) => {
+  try {
+    const { content } = req.body;
+
+    if (!content) {
+      return res.status(400).json({ message: 'Content is required' });
+    }
+
+    const summary = await aiService.summarizeNotes(content);
+
+    res.json({ summary });
+
+  } catch (error) {
+    console.error('Notes summarization error:', error);
+    res.status(500).json({ message: 'Failed to summarize notes' });
+  }
+});
 
 
 module.exports = router;
