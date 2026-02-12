@@ -130,24 +130,18 @@ const ResumeGenerator = () => {
         certifications: formData.certifications.split(',').map(c => c.trim()).filter(Boolean),
         achievements: formData.achievements.split(',').map(a => a.trim()).filter(Boolean)
       };
-
-      const response = await api.post('/ai/resume/generate', resumeData, {
-        responseType: 'blob'
-      });
-      
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'resume.pdf');
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-            setGeneratedResume(res.data.resume.generatedResume);
-      setPdfUrl(res.data.pdfUrl); // This already has the full path
-      
+  
+      const res = await api.post('/ai/resume/generate', resumeData);
+  
+      setGeneratedResume(res.data.resume.generatedResume);
+  
+      // Save PDF base64 in state
+      setPdfUrl(res.data.pdfBase64);
+  
       fetchSavedResumes();
-      alert('✅ Resume generated successfully!\n\n📄 You now have TWO formats:\n1. TXT (AI-generated text)\n2. PDF (ATS-friendly format)');
+  
+      alert('✅ Resume generated successfully!\n\n📄 You now have TWO formats:\n1. TXT\n2. PDF');
+  
     } catch (error) {
       console.error('Full error:', error);
       alert('Error generating resume: ' + (error.response?.data?.message || error.message));
@@ -155,6 +149,7 @@ const ResumeGenerator = () => {
       setLoading(false);
     }
   };
+  
 
   const downloadTXT = (resumeText = generatedResume) => {
     const blob = new Blob([resumeText], { type: 'text/plain' });
@@ -166,27 +161,27 @@ const ResumeGenerator = () => {
     URL.revokeObjectURL(url);
   };
 
-  const downloadPDF = async (pdfPath) => {
-    try {
-      console.log('Downloading PDF from:', pdfPath);
-      
-      const response = await api.get(pdfPath, {
-        responseType: 'blob'
-      });
-
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'resume.pdf');
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("PDF Download Error:", error);
-      alert("Error downloading PDF. The file may not exist on the server. Try generating a new resume.");
+  const downloadPDF = () => {
+    const byteCharacters = atob(pdfUrl);
+    const byteNumbers = new Array(byteCharacters.length);
+  
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
     }
+  
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: 'application/pdf' });
+  
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'resume.pdf');
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
   };
+  
 
   const viewResume = (resume) => {
     setGeneratedResume(resume.generatedResume);
@@ -535,7 +530,7 @@ const ResumeGenerator = () => {
                     Download TXT
                   </button>
                   {pdfUrl && (
-                    <button onClick={()=>downloadPDF(pdfUrl)}
+                    <button onClick={downloadPDF}
                       className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition shadow-lg">
                       <FileDown size={18}/>
                       Download PDF
