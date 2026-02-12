@@ -66,23 +66,22 @@ router.get('/resume', auth, async (req, res) => {
 });
 
 // Download PDF Resume
-router.get('/resume/download-pdf/:filename', auth, async (req, res) => {
+router.post('/resume/download-pdf', auth, async (req, res) => {
   try {
-    const filePath = path.join(__dirname, '../uploads', req.params.filename);
-    
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ message: 'PDF not found' });
-    }
+    const resumeData = req.body;
+
+    const pdfBuffer = await pdfGenerator.generateATSResumeBuffer(resumeData);
 
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${req.params.filename}"`);
-    
-    const fileStream = fs.createReadStream(filePath);
-    fileStream.pipe(res);
+    res.setHeader('Content-Disposition', 'attachment; filename=resume.pdf');
+
+    res.send(pdfBuffer);
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
+
 
 // Delete resume
 router.delete('/resume/:id', auth, async (req, res) => {
