@@ -163,6 +163,112 @@ class AIService {
     
     return response.data.candidates[0].content.parts[0].text;
   }
+  /* ============================
+   ROADMAP GENERATION
+============================ */
+
+async generateRoadmap(targetRole, duration = 8) {
+  const axios = require('axios');
+
+  try {
+    const response = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        contents: [{
+          parts: [{
+            text: `
+Create a ${duration}-week learning roadmap for becoming a ${targetRole}.
+
+Return the response strictly in JSON format like this:
+
+{
+  "weeklyPlan": [
+    {
+      "week": 1,
+      "title": "Week title",
+      "estimatedHours": 10,
+      "focus": ["area1", "area2"],
+      "topics": ["topic1", "topic2"],
+      "resources": ["resource1", "resource2"]
+    }
+  ]
+}
+`
+          }]
+        }]
+      }
+    );
+
+    const text = response.data.candidates[0].content.parts[0].text;
+
+    return JSON.parse(text);
+
+  } catch (error) {
+    console.error("Roadmap AI error:", error.message);
+
+    // Simple fallback roadmap
+    return {
+      weeklyPlan: Array.from({ length: duration }, (_, i) => ({
+        week: i + 1,
+        title: `Week ${i + 1} - Core Preparation`,
+        estimatedHours: 10,
+        focus: ["Fundamentals", "Practice"],
+        topics: ["Core Concepts", "Projects"],
+        resources: ["YouTube", "Official Docs"]
+      }))
+    };
+  }
+}
+
+
+/* ============================
+   NOTES SUMMARIZER
+============================ */
+
+async summarizeNotes(content) {
+  const axios = require('axios');
+
+  try {
+    const response = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        contents: [{
+          parts: [{
+            text: `
+Summarize the following notes clearly.
+
+Return response strictly in JSON format:
+
+{
+  "title": "Short title",
+  "summary": "Short summary paragraph",
+  "keyPoints": ["point1", "point2", "point3"]
+}
+
+Notes:
+${content}
+`
+          }]
+        }]
+      }
+    );
+
+    const text = response.data.candidates[0].content.parts[0].text;
+
+    return JSON.parse(text);
+
+  } catch (error) {
+    console.error("Notes AI error:", error.message);
+
+    // Simple fallback
+    return {
+      title: "Summary",
+      summary: content.substring(0, 300) + "...",
+      keyPoints: ["Review main ideas", "Revise important topics"]
+    };
+  }
+}
+
 }
 
 module.exports = new AIService();

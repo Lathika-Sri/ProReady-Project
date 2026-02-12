@@ -161,21 +161,22 @@ router.get('/health', (req, res) => {
 
 router.post('/roadmap/generate', auth, async (req, res) => {
   try {
-    const { career } = req.body;
+    const { targetRole, duration } = req.body;
 
-    if (!career) {
-      return res.status(400).json({ message: 'Career field is required' });
+    if (!targetRole) {
+      return res.status(400).json({ message: 'Target role is required' });
     }
 
-    const roadmap = await aiService.generateRoadmap(career);
+    const roadmap = await aiService.generateRoadmap(targetRole, duration);
 
     res.json({ roadmap });
 
   } catch (error) {
     console.error('Roadmap generation error:', error);
-    res.status(500).json({ message: 'Failed to generate roadmap' });
+    res.status(500).json({ message: error.message });
   }
 });
+
 /* ============================
    NOTES SUMMARIZER
 ============================ */
