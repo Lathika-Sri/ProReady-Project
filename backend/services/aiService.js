@@ -177,23 +177,31 @@ async generateRoadmap(targetRole, duration = 8) {
         contents: [{
           parts: [{
             text: `
-Create a ${duration}-week learning roadmap for becoming a ${targetRole}.
+Create a progressive ${duration}-week learning roadmap for becoming a ${targetRole}.
 
-Return the response strictly in JSON format like this:
+Structure:
+- Week 1-2: Fundamentals
+- Middle weeks: Intermediate concepts
+- Final weeks: Advanced topics + Projects + Interview preparation
+
+Each week MUST be different and progressively harder.
+
+Return ONLY valid JSON in this exact format:
 
 {
   "weeklyPlan": [
     {
       "week": 1,
-      "title": "Week title",
+      "title": "Clear week title",
       "estimatedHours": 10,
-      "focus": ["area1", "area2"],
+      "focus": ["focus1", "focus2"],
       "topics": ["topic1", "topic2"],
       "resources": ["resource1", "resource2"]
     }
   ]
 }
 `
+
           }]
         }]
       }
@@ -201,7 +209,9 @@ Return the response strictly in JSON format like this:
 
     const text = response.data.candidates[0].content.parts[0].text;
 
-    return JSON.parse(text);
+    const cleaned = text.replace(/```json|```/g, '').trim();
+return JSON.parse(cleaned);
+
 
   } catch (error) {
     console.error("Roadmap AI error:", error.message);

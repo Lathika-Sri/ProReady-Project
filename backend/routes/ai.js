@@ -7,6 +7,7 @@ const Resume = require('../models/Resume');
 const auth = require('../middleware/auth');
 const aiService = require('../services/aiService');
 const pdfGenerator = require('../services/pdfGenerator');
+const Notes = require('../models/Notes');
 
 
 /* ============================
@@ -180,24 +181,47 @@ router.post('/roadmap/generate', auth, async (req, res) => {
 /* ============================
    NOTES SUMMARIZER
 ============================ */
-
 router.post('/notes/summarize', auth, async (req, res) => {
   try {
-    const { content } = req.body;
+    const { title, content } = req.body;
 
-    if (!content) {
-      return res.status(400).json({ message: 'Content is required' });
+    if (!title || !content) {
+      return res.status(400).json({ message: 'Title and content are required' });
     }
 
-    const summary = await aiService.summarizeNotes(content);
+    const summaryData = await aiService.summarizeNotes(content);
 
-    res.json({ summary });
+    const newNote = new Notes({
+      userId: req.user.id,
+      title,
+      originalContent: content,
+      summary: summaryData.summary,
+      keyPoints: summaryData.keyPoints,
+      tags: []
+    });
+
+    await newNote.save();
+
+    res.json({ summary: newNote });
 
   } catch (error) {
     console.error('Notes summarization error:', error);
-    res.status(500).json({ message: 'Failed to summarize notes' });
+    res.status(500).json({ message: error.message });
   }
 });
+router.get('/notes', auth, async (req, res) => {
+  try {
+    const notes = await Notes.find({ userId: req.user.id })
+      .sort({ createdAt: -1 });
+
+    res.json({ notes });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
 
 
 module.exports = router;
