@@ -62,7 +62,7 @@ router.post('/resume/generate', auth, async (req, res) => {
       await fs.writeFile(pdfPath, pdfBuffer);
       console.log('✅ PDF saved to disk');
       
-      pdfUrl = `/api/ai/resume/download-pdf/${pdfFilename}`;
+      pdfUrl = `/ai/resume/download-pdf/${pdfFilename}`;
       
     } catch (pdfError) {
       console.error('⚠️ PDF generation failed:', pdfError.message);
