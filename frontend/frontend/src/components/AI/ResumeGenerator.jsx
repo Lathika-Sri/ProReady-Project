@@ -154,23 +154,27 @@ const ResumeGenerator = () => {
     URL.revokeObjectURL(url);
   };
 
- const downloadPDF = async (pdfPath) => {
-  try {
-    const response = await api.get(pdfPath, {
-      responseType: 'blob'
-    });
-
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'resume.pdf');
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-  } catch (error) {
-    alert("Error downloading PDF");
-  }
-};
+  const downloadPDF = async () => {
+    try {
+      const response = await api.post(
+        '/ai/resume/download-pdf',
+        formData,
+        { responseType: 'blob' }
+      );
+  
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'resume.pdf');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+  
+    } catch (error) {
+      alert("Error downloading PDF");
+    }
+  };
+  
 
 
   const viewResume = (resume) => {
