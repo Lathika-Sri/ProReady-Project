@@ -189,7 +189,26 @@ const ResumeGenerator = () => {
     setPdfBase64(resume.pdfPath ? `/ai/resume/download-pdf/${resume.pdfPath}` : '');
     setShowHistory(false);
   };
-
+  const downloadHistoryPDF = async (id) => {
+    try {
+      const response = await api.get(`/ai/resume/${id}/pdf`, {
+        responseType: 'blob'
+      });
+  
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'resume.pdf');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+  
+    } catch (error) {
+      alert('Failed to generate PDF');
+    }
+  };
+  
   return (
     <div className="max-w-6xl mx-auto p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="flex items-center justify-between mb-6">
@@ -263,13 +282,13 @@ const ResumeGenerator = () => {
                       </button>
                       {resume.pdfPath && (
                         <button
-                        onClick={() => downloadPDF(`/ai/resume/download-pdf/${resume.pdfPath}`)}
+                        onClick={() => downloadHistoryPDF(resume._id)}
                         className="flex items-center gap-1 px-3 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 text-sm font-medium transition"
-                          title="Download PDF"
-                        >
-                          <FileDown size={16} />
-                          PDF
-                        </button>
+                      >
+                        <FileDown size={16} />
+                        PDF
+                      </button>
+                      
                       )}
                       <button
                         onClick={() => deleteResume(resume._id)}
