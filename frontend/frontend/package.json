@@ -27,9 +27,6 @@
     "extends": [
       "react-app"
     ]
-  },
-  "engines": {
-    "node": "18.x"
   },  
   "browserslist": {
     "production": [
@@ -42,5 +39,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "engines": {
+    "node": "18.x"
   }
 }
