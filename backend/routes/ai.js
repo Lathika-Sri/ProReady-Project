@@ -57,9 +57,13 @@ router.post('/resume/generate', auth, async (req, res) => {
     console.log('✅ Resume saved to database');
 
     // STEP 4: Send PDF directly to frontend
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename="resume.pdf"');
-    return res.send(pdfBuffer);
+    // STEP 4: Send BOTH text + PDF (base64)
+return res.json({
+  resume: {
+    generatedResume: generatedText
+  },
+  pdfBase64: pdfBuffer.toString('base64')
+});
 
   } catch (error) {
     console.error('❌ Resume Generation Error:', error);
