@@ -10,25 +10,26 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [analyticsRes, streakRes] = await Promise.all([
+          api.get(`/sessions/analytics?period=${period}`),
+          api.get('/streaks')
+        ]);
+  
+        setAnalytics(analyticsRes.data);
+        setStreak(streakRes.data.streak);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+  
     fetchData();
-  }, [fetchData]);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [analyticsRes, streakRes] = await Promise.all([
-        api.get(`/sessions/analytics?period=${period}`),
-        api.get('/streaks')
-      ]);
-
-      setAnalytics(analyticsRes.data);
-      setStreak(streakRes.data.streak);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [period]);
+  
 
   const formatMinutes = (minutes) => {
     const hrs = Math.floor(minutes / 60);
