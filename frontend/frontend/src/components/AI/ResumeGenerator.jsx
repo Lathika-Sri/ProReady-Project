@@ -133,11 +133,12 @@ const ResumeGenerator = () => {
 
       const res = await api.post('/ai/resume/generate', resumeData);
       setGeneratedResume(res.data.resume.generatedResume);
-      setPdfUrl(res.data.pdfUrl.replace('/api', ''));
+      setPdfUrl(res.data.pdfUrl); // This already has the full path
       
       fetchSavedResumes();
       alert('✅ Resume generated successfully!\n\n📄 You now have TWO formats:\n1. TXT (AI-generated text)\n2. PDF (ATS-friendly format)');
     } catch (error) {
+      console.error('Full error:', error);
       alert('Error generating resume: ' + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
@@ -154,14 +155,14 @@ const ResumeGenerator = () => {
     URL.revokeObjectURL(url);
   };
 
-  const downloadPDF = async () => {
+  const downloadPDF = async (pdfPath) => {
     try {
-      const response = await api.post(
-        '/ai/resume/download-pdf',
-        formData,
-        { responseType: 'blob' }
-      );
-  
+      console.log('Downloading PDF from:', pdfPath);
+      
+      const response = await api.get(pdfPath, {
+        responseType: 'blob'
+      });
+
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -169,14 +170,16 @@ const ResumeGenerator = () => {
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
     } catch (error) {
-      alert("Error downloading PDF");
+      console.error("PDF Download Error:", error);
+      alert("Error downloading PDF. The file may not exist on the server. Try generating a new resume.");
     }
   };
-  
 
   const viewResume = (resume) => {
     setGeneratedResume(resume.generatedResume);
+    // Only set PDF URL if the resume has a pdfPath
     setPdfUrl(resume.pdfPath ? `/api/ai/resume/download-pdf/${resume.pdfPath}` : '');
     setShowHistory(false);
   };
@@ -254,8 +257,7 @@ const ResumeGenerator = () => {
                       </button>
                       {resume.pdfPath && (
                         <button
-                          onClick={() => downloadPDF(`/ai/resume/download-pdf/${resume.pdfPath}`)}
-
+                          onClick={() => downloadPDF(`/api/ai/resume/download-pdf/${resume.pdfPath}`)}
                           className="flex items-center gap-1 px-3 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 text-sm font-medium transition"
                           title="Download PDF"
                         >
