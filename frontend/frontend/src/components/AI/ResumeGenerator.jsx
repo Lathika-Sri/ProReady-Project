@@ -5,9 +5,9 @@ import api from '../../utils/api';
 const ResumeGenerator = () => {
   const [loading, setLoading] = useState(false);
   const [generatedResume, setGeneratedResume] = useState('');
-  const [pdfUrl, setPdfUrl] = useState('');
   const [savedResumes, setSavedResumes] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [pdfBase64, setPdfBase64] = useState('');
 
   const [formData, setFormData] = useState({
     personalInfo: {
@@ -136,7 +136,7 @@ const ResumeGenerator = () => {
       setGeneratedResume(res.data.resume.generatedResume);
   
       // Save PDF base64 in state
-      setPdfUrl(res.data.pdfBase64);
+      setPdfBase64(res.data.pdfBase64);
   
       fetchSavedResumes();
   
@@ -162,7 +162,7 @@ const ResumeGenerator = () => {
   };
 
   const downloadPDF = () => {
-    const byteCharacters = atob(pdfUrl);
+    const byteCharacters = atob(pdfBase64);
     const byteNumbers = new Array(byteCharacters.length);
   
     for (let i = 0; i < byteCharacters.length; i++) {
@@ -186,7 +186,7 @@ const ResumeGenerator = () => {
   const viewResume = (resume) => {
     setGeneratedResume(resume.generatedResume);
     // Only set PDF URL if the resume has a pdfPath
-    setPdfUrl(resume.pdfPath ? `/ai/resume/download-pdf/${resume.pdfPath}` : '');
+    setPdfBase64(resume.pdfPath ? `/ai/resume/download-pdf/${resume.pdfPath}` : '');
     setShowHistory(false);
   };
 
@@ -529,7 +529,7 @@ const ResumeGenerator = () => {
                     <Download size={18}/>
                     Download TXT
                   </button>
-                  {pdfUrl && (
+                  {pdfBase64  && (
                     <button onClick={downloadPDF}
                       className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition shadow-lg">
                       <FileDown size={18}/>
