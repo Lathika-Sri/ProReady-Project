@@ -177,58 +177,82 @@ async generateRoadmap(targetRole, duration = 8) {
         contents: [{
           parts: [{
             text: `
-Create a progressive ${duration}-week learning roadmap for becoming a ${targetRole}.
+Create a detailed ${duration}-week roadmap to become a ${targetRole}.
 
-Structure:
+Rules:
+- Every week must be DIFFERENT.
+- Skills must progressively increase in difficulty.
 - Week 1-2: Fundamentals
-- Middle weeks: Intermediate concepts
-- Final weeks: Advanced topics + Projects + Interview preparation
+- Middle weeks: Intermediate development
+- Final weeks: Advanced topics, projects, and interview preparation.
+- Include different focus areas every week.
 
-Each week MUST be different and progressively harder.
-
-Return ONLY valid JSON in this exact format:
+Return ONLY valid JSON in this exact structure:
 
 {
   "weeklyPlan": [
     {
       "week": 1,
-      "title": "Clear week title",
-      "estimatedHours": 10,
-      "focus": ["focus1", "focus2"],
-      "topics": ["topic1", "topic2"],
-      "resources": ["resource1", "resource2"]
+      "title": "Week title",
+      "estimatedHours": 12,
+      "focus": ["Focus Area 1", "Focus Area 2"],
+      "topics": ["Topic 1", "Topic 2"],
+      "resources": ["Resource 1", "Resource 2"]
     }
   ]
 }
 `
-
           }]
         }]
       }
     );
 
     const text = response.data.candidates[0].content.parts[0].text;
-
     const cleaned = text.replace(/```json|```/g, '').trim();
-return JSON.parse(cleaned);
+    const parsed = JSON.parse(cleaned);
 
+    // Extra safety check
+    if (!parsed.weeklyPlan || parsed.weeklyPlan.length === 0) {
+      throw new Error("Invalid roadmap format");
+    }
+
+    return parsed;
 
   } catch (error) {
     console.error("Roadmap AI error:", error.message);
 
-    // Simple fallback roadmap
+    // Smart fallback with variation
+    const stages = [
+      "Fundamentals",
+      "Core Development",
+      "Advanced Concepts",
+      "System Design",
+      "Projects",
+      "Optimization",
+      "Testing",
+      "Interview Prep"
+    ];
+
     return {
       weeklyPlan: Array.from({ length: duration }, (_, i) => ({
         week: i + 1,
-        title: `Week ${i + 1} - Core Preparation`,
-        estimatedHours: 10,
-        focus: ["Fundamentals", "Practice"],
-        topics: ["Core Concepts", "Projects"],
-        resources: ["YouTube", "Official Docs"]
+        title: `Week ${i + 1} - ${stages[i % stages.length]}`,
+        estimatedHours: 10 + i,
+        focus: [`${stages[i % stages.length]} Skills`, "Hands-on Practice"],
+        topics: [
+          `${targetRole} Topic ${i + 1}`,
+          `Practical Implementation ${i + 1}`
+        ],
+        resources: [
+          "Official Documentation",
+          "YouTube Tutorials",
+          "Hands-on Projects"
+        ]
       }))
     };
   }
 }
+
 
 
 /* ============================
