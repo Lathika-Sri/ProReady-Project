@@ -574,7 +574,7 @@ const ResumeGenerator = () => {
                     <Download size={18}/>
                     Download TXT
                   </button>
-                  {pdfBase64  && (
+                  {generatedResume   && (
                     <button onClick={downloadPDF}
                       className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition shadow-lg">
                       <FileDown size={18}/>
