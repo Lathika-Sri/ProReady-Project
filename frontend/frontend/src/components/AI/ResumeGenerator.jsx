@@ -8,6 +8,7 @@ const ResumeGenerator = () => {
   const [savedResumes, setSavedResumes] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [pdfBase64, setPdfBase64] = useState('');
+  const [currentResumeId, setCurrentResumeId] = useState(null);
 
   const [formData, setFormData] = useState({
     personalInfo: {
@@ -137,7 +138,7 @@ const ResumeGenerator = () => {
   
       // Save PDF base64 in state
       setPdfBase64(res.data.pdfBase64);
-  
+      setCurrentResumeId(null);
       fetchSavedResumes();
   
       alert('✅ Resume generated successfully!\n\n📄 You now have TWO formats:\n1. TXT\n2. PDF');
@@ -161,34 +162,59 @@ const ResumeGenerator = () => {
     URL.revokeObjectURL(url);
   };
 
-  const downloadPDF = () => {
-    const byteCharacters = atob(pdfBase64);
-    const byteNumbers = new Array(byteCharacters.length);
+  const downloadPDF = async () => {
+    try {
+      // If base64 exists (new resume)
+      if (pdfBase64) {
+        const byteCharacters = atob(pdfBase64);
+        const byteNumbers = new Array(byteCharacters.length);
   
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+  
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+  
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'resume.pdf');
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+  
+      } 
+      // If it's old resume
+      else if (currentResumeId) {
+        const response = await api.get(`/ai/resume/${currentResumeId}/pdf`, {
+          responseType: 'blob'
+        });
+  
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'resume.pdf');
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      }
+  
+    } catch (error) {
+      alert('Failed to generate PDF');
     }
-  
-    const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray], { type: 'application/pdf' });
-  
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'resume.pdf');
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
   };
   
 
   const viewResume = (resume) => {
     setGeneratedResume(resume.generatedResume);
-    // Only set PDF URL if the resume has a pdfPath
-    setPdfBase64(resume.pdfPath ? `/ai/resume/download-pdf/${resume.pdfPath}` : '');
+    setCurrentResumeId(resume._id);
+    setPdfBase64(''); // clear base64
     setShowHistory(false);
   };
+  
   const downloadHistoryPDF = async (id) => {
     try {
       const response = await api.get(`/ai/resume/${id}/pdf`, {
